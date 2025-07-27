@@ -1,4 +1,7 @@
-import { DefaultChatTransport } from 'ai';
+import {
+  DefaultChatTransport,
+  lastAssistantMessageIsCompleteWithToolCalls,
+} from 'ai';
 import { useChat } from '@ai-sdk/react';
 import { useState } from 'react';
 import {
@@ -21,7 +24,20 @@ export function Chat() {
   const convexUrl = import.meta.env.VITE_CONVEX_API_URL;
 
   const [input, setInput] = useState('');
-  const { messages, sendMessage } = useChat({
+  const { messages, sendMessage, addToolResult } = useChat({
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
+    onToolCall: ({ toolCall }) => {
+      if (toolCall.toolName === 'getLocation') {
+        const cities = ['New York', 'Los Angeles', 'Chicago', 'San Francisco'];
+
+        // No await - avoids potential deadlocks
+        addToolResult({
+          tool: toolCall.toolName,
+          toolCallId: toolCall.toolCallId,
+          output: cities[Math.floor(Math.random() * cities.length)],
+        });
+      }
+    },
     transport: new DefaultChatTransport({
       api: `${convexUrl}/completion`,
     }),
@@ -52,6 +68,162 @@ export function Chat() {
                         <MessageContent markdown className='bg-transparent p-0'>
                           {content}
                         </MessageContent>
+
+                        {message.parts.map((part) => {
+                          switch (part.type) {
+                            case 'tool-askForConfirmation':
+                            case 'tool-getLocation':
+                            case 'tool-getWeatherInformation':
+                              switch (part.state) {
+                                case 'input-streaming':
+                                  return (
+                                    <pre>
+                                      {JSON.stringify(part.input, null, 2)}
+                                    </pre>
+                                  );
+                                case 'input-available':
+                                  return (
+                                    <pre>
+                                      {JSON.stringify(part.input, null, 2)}
+                                    </pre>
+                                  );
+                                case 'output-available':
+                                  return (
+                                    <pre>
+                                      {JSON.stringify(part.output, null, 2)}
+                                    </pre>
+                                  );
+                                case 'output-error':
+                                  return <div>Error: {part.errorText}</div>;
+                              }
+                          }
+                        })}
+                        {message.parts.map((part) => {
+                          switch (part.type) {
+                            // for tool parts, use the typed tool part names:
+                            case 'tool-askForConfirmation': {
+                              const callId = part.toolCallId;
+
+                              switch (part.state) {
+                                case 'input-streaming':
+                                  return (
+                                    <div key={callId}>
+                                      Loading confirmation request...
+                                    </div>
+                                  );
+                                case 'input-available':
+                                  return (
+                                    <div key={callId}>
+                                      {part.input.message}
+                                      <div>
+                                        <Button
+                                          onClick={() =>
+                                            addToolResult({
+                                              tool: 'askForConfirmation',
+                                              toolCallId: callId,
+                                              output: 'Yes, confirmed.',
+                                            })
+                                          }
+                                        >
+                                          Yes
+                                        </Button>
+                                        <Button
+                                          onClick={() =>
+                                            addToolResult({
+                                              tool: 'askForConfirmation',
+                                              toolCallId: callId,
+                                              output: 'No, denied',
+                                            })
+                                          }
+                                        >
+                                          No
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  );
+                                case 'output-available':
+                                  return (
+                                    <div key={callId}>
+                                      Location access allowed: {part.output}
+                                    </div>
+                                  );
+                                case 'output-error':
+                                  return (
+                                    <div key={callId}>
+                                      Error: {part.errorText}
+                                    </div>
+                                  );
+                              }
+                              break;
+                            }
+
+                            case 'tool-getLocation': {
+                              const callId = part.toolCallId;
+
+                              switch (part.state) {
+                                case 'input-streaming':
+                                  return (
+                                    <div key={callId}>
+                                      Preparing location request...
+                                    </div>
+                                  );
+                                case 'input-available':
+                                  return (
+                                    <div key={callId}>Getting location...</div>
+                                  );
+                                case 'output-available':
+                                  return (
+                                    <div key={callId}>
+                                      Location: {part.output}
+                                    </div>
+                                  );
+                                case 'output-error':
+                                  return (
+                                    <div key={callId}>
+                                      Error getting location: {part.errorText}
+                                    </div>
+                                  );
+                              }
+                              break;
+                            }
+
+                            case 'tool-getWeatherInformation': {
+                              const callId = part.toolCallId;
+
+                              switch (part.state) {
+                                // example of pre-rendering streaming tool inputs:
+                                case 'input-streaming':
+                                  return (
+                                    <pre key={callId}>
+                                      {JSON.stringify(part, null, 2)}
+                                    </pre>
+                                  );
+                                case 'input-available':
+                                  return (
+                                    <div key={callId}>
+                                      Getting weather information for{' '}
+                                      {part.input.city}...
+                                    </div>
+                                  );
+                                case 'output-available':
+                                  return (
+                                    <div key={callId}>
+                                      Weather in {part.input.city}:{' '}
+                                      {part.output}
+                                    </div>
+                                  );
+                                case 'output-error':
+                                  return (
+                                    <div key={callId}>
+                                      Error getting weather for{' '}
+                                      {part.input.city}: {part.errorText}
+                                    </div>
+                                  );
+                              }
+                              break;
+                            }
+                          }
+                        })}
                       </div>
                     </Message>
                   ) : (
