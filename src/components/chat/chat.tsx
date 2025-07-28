@@ -18,13 +18,14 @@ import {
   MessageAvatar,
   MessageContent,
 } from '../ui/message';
+import { ArrowUpIcon, SquareIcon } from 'lucide-react';
 import { ChatContainerContent, ChatContainerRoot } from '../ui/chat-container';
 
 export function Chat() {
   const convexUrl = import.meta.env.VITE_CONVEX_API_URL;
 
   const [input, setInput] = useState('');
-  const { messages, sendMessage, addToolResult } = useChat({
+  const { messages, sendMessage, addToolResult, status } = useChat({
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
     onToolCall: ({ toolCall }) => {
       if (toolCall.toolName === 'getLocation') {
@@ -46,6 +47,15 @@ export function Chat() {
   if (!convexUrl) {
     return <div>Error: VITE_CONVEX_API_URL not set</div>;
   }
+
+  const handleSubmit = () => {
+    console.log('submit', input);
+
+    if (input.trim()) {
+      sendMessage({ text: input });
+      setInput('');
+    }
+  };
 
   return (
     <div className='flex flex-col'>
@@ -238,28 +248,33 @@ export function Chat() {
         </ChatContainerRoot>
       </div>
 
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (input.trim()) {
-            sendMessage({ text: input });
-            setInput('');
-          }
-        }}
-      >
-        <PromptInput>
-          <PromptInputTextarea
-            value={input}
-            placeholder='Ask prompt-kit'
-            onChange={(e) => setInput(e.target.value)}
-          />
-          <PromptInputActions>
-            <PromptInputAction tooltip='Send'>
-              <Button type='submit'>Send</Button>
-            </PromptInputAction>
-          </PromptInputActions>
-        </PromptInput>
-      </form>
+      <PromptInput onSubmit={handleSubmit}>
+        <PromptInputTextarea
+          value={input}
+          placeholder='Ask prompt-kit'
+          onChange={(e) => setInput(e.target.value)}
+        />
+        <PromptInputActions className='flex justify-end'>
+          <PromptInputAction
+            tooltip={
+              status === 'streaming' ? 'Stop generation' : 'Send message'
+            }
+          >
+            <Button
+              variant='default'
+              size='icon'
+              type='submit'
+              className='h-8 w-8 rounded-full'
+            >
+              {status === 'streaming' ? (
+                <SquareIcon className='size-5 fill-current' />
+              ) : (
+                <ArrowUpIcon className='size-5' />
+              )}
+            </Button>
+          </PromptInputAction>
+        </PromptInputActions>
+      </PromptInput>
     </div>
   );
 }
