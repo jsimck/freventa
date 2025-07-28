@@ -1,16 +1,17 @@
+import { useChat } from '@ai-sdk/react';
 import {
   DefaultChatTransport,
   lastAssistantMessageIsCompleteWithToolCalls,
 } from 'ai';
-import { useChat } from '@ai-sdk/react';
+import { ArrowUpIcon, SquareIcon } from 'lucide-react';
 import { useState } from 'react';
-import {
-  PromptInput,
-  PromptInputAction,
-  PromptInputActions,
-  PromptInputTextarea,
-} from '../ui/prompt-input';
+import { cn } from '@/lib/utils';
 import { Button } from '../ui/button';
+import {
+  ChatContainerContent,
+  ChatContainerRoot,
+  ChatContainerScrollAnchor,
+} from '../ui/chat-container';
 import {
   Message,
   MessageAction,
@@ -18,8 +19,14 @@ import {
   MessageAvatar,
   MessageContent,
 } from '../ui/message';
-import { ArrowUpIcon, SquareIcon } from 'lucide-react';
-import { ChatContainerContent, ChatContainerRoot } from '../ui/chat-container';
+import {
+  PromptInput,
+  PromptInputAction,
+  PromptInputActions,
+  PromptInputTextarea,
+} from '../ui/prompt-input';
+import { Reasoning, ReasoningContent, ReasoningTrigger } from '../ui/reasoning';
+import { ScrollButton } from '../ui/scroll-button';
 
 export function Chat() {
   const convexUrl = import.meta.env.VITE_CONVEX_API_URL;
@@ -57,202 +64,87 @@ export function Chat() {
     }
   };
 
+  console.log(messages);
+
   return (
-    <div className='flex flex-col'>
-      <div className='flex-1 overflow-y-auto p-4'></div>
+    <div className='mx-auto flex h-screen max-w-[800px] flex-col'>
+      <div className='flex-1 overflow-y-auto p-4' />
 
       <div className='flex flex-col gap-8'>
-        <ChatContainerRoot className='flex-1'>
-          <ChatContainerContent className='space-y-4 p-4'>
+        <ChatContainerRoot className='w-full'>
+          <ChatContainerContent className='space-y-12 overflow-y-auto p-4'>
             {messages.map((message) => {
-              const content = message.parts
+              const { role, parts } = message;
+              const content = parts
                 .map((part) => (part.type === 'text' ? part.text : null))
+                ?.join('');
+              const reasoningContent = parts
+                .map((part) => (part.type === 'reasoning' ? part.text : null))
                 ?.join('');
 
               return (
-                <div key={message.id}>
-                  {message.role === 'assistant' ? (
-                    <Message className='justify-start'>
-                      <MessageAvatar src='' alt='AI' fallback='AI' />
-                      <div className='flex w-full flex-col gap-2'>
-                        <MessageContent markdown className='bg-transparent p-0'>
-                          {content}
-                        </MessageContent>
-
-                        {message.parts.map((part) => {
-                          switch (part.type) {
-                            case 'tool-askForConfirmation':
-                            case 'tool-getLocation':
-                            case 'tool-getWeatherInformation':
-                              switch (part.state) {
-                                case 'input-streaming':
-                                  return (
-                                    <pre>
-                                      {JSON.stringify(part.input, null, 2)}
-                                    </pre>
-                                  );
-                                case 'input-available':
-                                  return (
-                                    <pre>
-                                      {JSON.stringify(part.input, null, 2)}
-                                    </pre>
-                                  );
-                                case 'output-available':
-                                  return (
-                                    <pre>
-                                      {JSON.stringify(part.output, null, 2)}
-                                    </pre>
-                                  );
-                                case 'output-error':
-                                  return <div>Error: {part.errorText}</div>;
-                              }
-                          }
-                        })}
-                        {message.parts.map((part) => {
-                          switch (part.type) {
-                            // for tool parts, use the typed tool part names:
-                            case 'tool-askForConfirmation': {
-                              const callId = part.toolCallId;
-
-                              switch (part.state) {
-                                case 'input-streaming':
-                                  return (
-                                    <div key={callId}>
-                                      Loading confirmation request...
-                                    </div>
-                                  );
-                                case 'input-available':
-                                  return (
-                                    <div key={callId}>
-                                      {part.input.message}
-                                      <div>
-                                        <Button
-                                          onClick={() =>
-                                            addToolResult({
-                                              tool: 'askForConfirmation',
-                                              toolCallId: callId,
-                                              output: 'Yes, confirmed.',
-                                            })
-                                          }
-                                        >
-                                          Yes
-                                        </Button>
-                                        <Button
-                                          onClick={() =>
-                                            addToolResult({
-                                              tool: 'askForConfirmation',
-                                              toolCallId: callId,
-                                              output: 'No, denied',
-                                            })
-                                          }
-                                        >
-                                          No
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  );
-                                case 'output-available':
-                                  return (
-                                    <div key={callId}>
-                                      Location access allowed: {part.output}
-                                    </div>
-                                  );
-                                case 'output-error':
-                                  return (
-                                    <div key={callId}>
-                                      Error: {part.errorText}
-                                    </div>
-                                  );
-                              }
-                              break;
-                            }
-
-                            case 'tool-getLocation': {
-                              const callId = part.toolCallId;
-
-                              switch (part.state) {
-                                case 'input-streaming':
-                                  return (
-                                    <div key={callId}>
-                                      Preparing location request...
-                                    </div>
-                                  );
-                                case 'input-available':
-                                  return (
-                                    <div key={callId}>Getting location...</div>
-                                  );
-                                case 'output-available':
-                                  return (
-                                    <div key={callId}>
-                                      Location: {part.output}
-                                    </div>
-                                  );
-                                case 'output-error':
-                                  return (
-                                    <div key={callId}>
-                                      Error getting location: {part.errorText}
-                                    </div>
-                                  );
-                              }
-                              break;
-                            }
-
-                            case 'tool-getWeatherInformation': {
-                              const callId = part.toolCallId;
-
-                              switch (part.state) {
-                                // example of pre-rendering streaming tool inputs:
-                                case 'input-streaming':
-                                  return (
-                                    <pre key={callId}>
-                                      {JSON.stringify(part, null, 2)}
-                                    </pre>
-                                  );
-                                case 'input-available':
-                                  return (
-                                    <div key={callId}>
-                                      Getting weather information for{' '}
-                                      {part.input.city}...
-                                    </div>
-                                  );
-                                case 'output-available':
-                                  return (
-                                    <div key={callId}>
-                                      Weather in {part.input.city}:{' '}
-                                      {part.output}
-                                    </div>
-                                  );
-                                case 'output-error':
-                                  return (
-                                    <div key={callId}>
-                                      Error getting weather for{' '}
-                                      {part.input.city}: {part.errorText}
-                                    </div>
-                                  );
-                              }
-                              break;
-                            }
-                          }
-                        })}
-                      </div>
-                    </Message>
-                  ) : (
-                    <Message className='justify-end'>
-                      <MessageContent>{content}</MessageContent>
-                    </Message>
+                <Message
+                  className={cn(
+                    'mx-auto flex w-full max-w-3xl flex-col gap-2 px-0 md:px-6',
+                    role === 'user' ? 'items-end' : 'items-start'
                   )}
-                </div>
+                  key={message.id}
+                >
+                  <div className='max-w-[85%] sm:max-w-[75%]'>
+                    <MessageContent
+                      className={cn({
+                        'bg-transparent p-0': role === 'assistant',
+                        'bg-primary text-primary-foreground': role === 'user',
+                      })}
+                      markdown
+                    >
+                      {content}
+                    </MessageContent>
+
+                    {reasoningContent && (
+                      <Reasoning isStreaming={status === 'streaming'}>
+                        <Button
+                          asChild
+                          className='my-2'
+                          size='sm'
+                          variant='outline'
+                        >
+                          <ReasoningTrigger>Show reasoning</ReasoningTrigger>
+                        </Button>
+                        <ReasoningContent
+                          className='ml-2 border-l-2 border-l-slate-200 px-2 pb-1 dark:border-l-slate-700'
+                          markdown
+                        >
+                          {reasoningContent}
+                        </ReasoningContent>
+                      </Reasoning>
+                    )}
+                  </div>
+                </Message>
               );
             })}
+            <ChatContainerScrollAnchor />
           </ChatContainerContent>
+
+          <div className='absolute right-7 bottom-4 z-10'>
+            <ScrollButton
+              className='bg-primary shadow-sm hover:bg-primary/90'
+              size='icon'
+              variant='default'
+            />
+          </div>
         </ChatContainerRoot>
       </div>
 
-      <PromptInput onSubmit={handleSubmit}>
+      <PromptInput
+        className='sticky bottom-6'
+        isLoading={status === 'streaming'}
+        onSubmit={handleSubmit}
+      >
         <PromptInputTextarea
-          value={input}
-          placeholder='Ask prompt-kit'
           onChange={(e) => setInput(e.target.value)}
+          placeholder='Ask prompt-kit'
+          value={input}
         />
         <PromptInputActions className='flex justify-end'>
           <PromptInputAction
@@ -261,10 +153,10 @@ export function Chat() {
             }
           >
             <Button
-              variant='default'
+              className='h-8 w-8 rounded-full'
               size='icon'
               type='submit'
-              className='h-8 w-8 rounded-full'
+              variant='default'
             >
               {status === 'streaming' ? (
                 <SquareIcon className='size-5 fill-current' />

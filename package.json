@@ -8,7 +8,9 @@
     "dev:convex": "convex dev",
     "dev:all": "concurrently \"pnpm run dev:vite\" \"pnpm run dev:convex\"",
     "dev": "pnpm run dev:all",
-    "build": "vite build"
+    "build": "vite build",
+    "lint": "biome check .",
+    "lint:fix": "biome check . --write"
   },
   "keywords": [],
   "author": "",
@@ -44,6 +46,7 @@
     "zod": "^4.0.10"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.1.2",
     "@tailwindcss/vite": "^4.1.11",
     "@types/node": "^24.1.0",
     "@vitejs/plugin-react": "^4.7.0",
@@ -51,6 +54,7 @@
     "tailwindcss": "^4.1.11",
     "tw-animate-css": "^1.3.6",
     "typescript": "^5.8.3",
+    "ultracite": "5.1.1",
     "vite": "^7.0.6",
     "vite-tsconfig-paths": "^5.1.4"
   }

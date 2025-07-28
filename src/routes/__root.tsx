@@ -1,13 +1,13 @@
 import '../style.css';
-import type { ReactNode } from 'react';
-import { QueryClient } from "@tanstack/react-query";
-import { createRootRouteWithContext } from "@tanstack/react-router";
+import type { QueryClient } from '@tanstack/react-query';
 import {
-  Outlet,
   createRootRoute,
+  createRootRouteWithContext,
   HeadContent,
+  Outlet,
   Scripts,
 } from '@tanstack/react-router';
+import type { ReactNode } from 'react';
 
 export const Route = createRootRouteWithContext<{
   queryClient: QueryClient;

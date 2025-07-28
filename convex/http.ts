@@ -1,8 +1,8 @@
-import { z } from 'zod';
-import { httpRouter } from 'convex/server';
-import { action, httpAction } from './_generated/server';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 import { convertToModelMessages, streamText, tool } from 'ai';
+import { httpRouter } from 'convex/server';
+import { z } from 'zod';
+import { action, httpAction } from './_generated/server';
 
 const http = httpRouter();
 
@@ -33,7 +33,8 @@ http.route({
     const result = streamText({
       model: createOpenRouter({
         apiKey: process.env.OPENROUTER_API_KEY,
-      })('google/gemini-2.0-flash-001'),
+        // })('google/gemini-2.0-flash-001'),
+      })('google/gemini-2.5-pro'),
       messages: convertToModelMessages(messages),
       system:
         'You are a helpful assistant that can answer questions and help with tasks. You can use the following tools to help you: getWeatherInformation, askForConfirmation, getLocation. Before using any tool, always ask for confirmation using askForConfirmation tool.',
@@ -41,9 +42,17 @@ http.route({
         // server-side tool with execute function:
         getWeatherInformation: {
           description: 'show the weather in a given city to the user',
-          parameters: z.object({ city: z.string() }).describe('The city to get the weather for'),
+          parameters: z
+            .object({ city: z.string() })
+            .describe('The city to get the weather for'),
           execute: async ({}: { city: string }) => {
-            const weatherOptions = ['sunny', 'cloudy', 'rainy', 'snowy', 'windy'];
+            const weatherOptions = [
+              'sunny',
+              'cloudy',
+              'rainy',
+              'snowy',
+              'windy',
+            ];
             return weatherOptions[
               Math.floor(Math.random() * weatherOptions.length)
             ];
@@ -53,7 +62,9 @@ http.route({
         askForConfirmation: {
           description: 'Ask the user for confirmation.',
           parameters: z.object({
-            message: z.string().describe('The message to ask for confirmation.'),
+            message: z
+              .string()
+              .describe('The message to ask for confirmation.'),
           }),
         },
         // client-side tool that is automatically executed on the client:
